@@ -53,6 +53,7 @@ Questo documento fornisce un piano di implementazione dettagliato, passo dopo pa
 - macOS con Python 3.14
 - Ollama Server v0.12.11 installato
 - Modello baby-ai-qwen3-tool creato localmente da file GGUF
+  - Scarica da Hugging Face: [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex) | [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/tree/main)
 - Node.js 25 (tramite nvm)
 - Rust 1.91.1 per Tauri
 
@@ -109,10 +110,15 @@ mkdir -p "Nuova Baby AI"
 cd "Nuova Baby AI"
 ```
 
-### Step 0.2: Inizializza Git (su branch NEWBABY7)
+### Step 0.2: Inizializza Git
 ```bash
-git checkout NEWBABY7
-git pull origin NEWBABY7
+# Inizializza la repository locale se necessario
+# git init
+# Collega il repository remoto se necessario
+# git remote add origin <URL-REPO>
+# Assicurati di essere sul branch main
+# git checkout main
+# git pull origin main
 ```
 
 ### Step 0.3: Crea l'Ambiente Virtuale Python
@@ -137,19 +143,24 @@ pip install -r requirements.txt
 ### Step 0.5: Verifica, Scarica e Configura Ollama (Aggiornato)
 Obiettivo: Scaricare il GGUF e creare il modello locale baby-ai-qwen3-tool con il Modelfile specifico per il Tool Calling di Qwen.
 
-1. **Verifica Ollama:**
+1. **Scarica il modello GGUF Qwen3-4B-toolcalling-Q8_0.gguf da Hugging Face:**
+   - [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex)
+   - [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/tree/main)
+   - Scarica il file e salvalo in `~/Downloads/` o nella cartella desiderata.
+2. **Verifica Ollama:**
    ```bash
    ollama --version
    # Risultato Atteso: v0.12.11
    ```
-2. **Scarica e Prepara il Modello GGUF:**
-   - Scarica il file GGUF Qwen3-4B-toolcalling-Q8_0.gguf da Hugging Face.
-   - Crea la cartella e sposta il modello:
+3. **Crea la cartella per il modello:**
    ```bash
    mkdir -p models/llm
+   ```
+4. **Sposta il modello GGUF nella cartella:**
+   ```bash
    mv ~/Downloads/Qwen3-4B-toolcalling-Q8_0.gguf models/llm/
    ```
-3. **Crea Modelfile (Modelfile):**
+5. **Crea Modelfile (Modelfile):**
    - Crea il Modelfile nella root del progetto (`touch Modelfile`).
    - Contenuto di Modelfile (Cruciale per Tool Calling ChatML):
    ```
@@ -169,11 +180,11 @@ Obiettivo: Scaricare il GGUF e creare il modello locale baby-ai-qwen3-tool con i
    PARAMETER temperature 0.0
    PARAMETER top_p 0.9
    ```
-4. **Crea il Modello Locale in Ollama:**
+6. **Crea il Modello Locale in Ollama:**
    ```bash
    ollama create baby-ai-qwen3-tool -f Modelfile
    ```
-5. **Verifica il modello:**
+7. **Verifica il modello:**
    ```bash
    ollama list | grep baby-ai-qwen3-tool
    ```
@@ -297,6 +308,7 @@ Python rewrite di Baby AI con architettura multi-agente. La Fase 1.1 implementa 
 - Python 3.14.0
 - Ollama Server v0.12.11 installato localmente
 - **Modello `baby-ai-qwen3-tool` creato localmente da GGUF**
+  - Scarica da Hugging Face: [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex) | [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/tree/main)
 
 ## Setup
 1. **Installa Ollama**
