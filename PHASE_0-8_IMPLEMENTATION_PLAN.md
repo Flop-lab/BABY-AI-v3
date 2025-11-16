@@ -48,12 +48,12 @@
 
 Questo documento fornisce un piano di implementazione dettagliato, passo dopo passo, per la Fase 1.1 del rewrite Baby AI in Python. Il piano stabilisce le fondamenta per l'architettura di Tool Calling (Chiamata a Funzione) e Routing tramite un approccio nativo e leggero.
 
-**Tempo Stimato:** 3 giorni  
+**Tempo Stimato:** 3 giorni
 **Prerequisiti:**
 - macOS con Python 3.14
-- Ollama Server v0.12.11 installato
+- Ollama Server v0.12.11 installato (scarica da [GitHub Releases](https://github.com/ollama/ollama/releases))
 - Modello baby-ai-qwen3-tool creato localmente da file GGUF
-  - Scarica da Hugging Face: [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex) | [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/tree/main)
+  - Scarica `Qwen3-4B-Function-Calling-Pro.gguf` (4.28 GB) da Hugging Face: [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex) | [Download diretto](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/blob/main/Qwen3-4B-Function-Calling-Pro.gguf)
 - Node.js 25 (tramite nvm)
 - Rust 1.91.1 per Tauri
 
@@ -143,14 +143,16 @@ pip install -r requirements.txt
 ### Step 0.5: Verifica, Scarica e Configura Ollama (Aggiornato)
 Obiettivo: Scaricare il GGUF e creare il modello locale baby-ai-qwen3-tool con il Modelfile specifico per il Tool Calling di Qwen.
 
-1. **Scarica il modello GGUF Qwen3-4B-toolcalling-Q8_0.gguf da Hugging Face:**
+1. **Scarica il modello GGUF corretto da Hugging Face:**
    - [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex)
-   - [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/tree/main)
+   - [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/blob/main/Qwen3-4B-Function-Calling-Pro.gguf)
+   - **Nome file:** `Qwen3-4B-Function-Calling-Pro.gguf` (4.28 GB)
    - Scarica il file e salvalo in `~/Downloads/` o nella cartella desiderata.
 2. **Verifica Ollama:**
    ```bash
    ollama --version
-   # Risultato Atteso: v0.12.11
+   # Risultato Atteso: v0.12.11 (con tool calling stabile e fix JSON parsing)
+   # Se hai una versione diversa, aggiorna da https://github.com/ollama/ollama/releases
    ```
 3. **Crea la cartella per il modello:**
    ```bash
@@ -158,33 +160,43 @@ Obiettivo: Scaricare il GGUF e creare il modello locale baby-ai-qwen3-tool con i
    ```
 4. **Sposta il modello GGUF nella cartella:**
    ```bash
-   mv ~/Downloads/Qwen3-4B-toolcalling-Q8_0.gguf models/llm/
+   mv ~/Downloads/Qwen3-4B-Function-Calling-Pro.gguf models/llm/
    ```
-5. **Crea Modelfile (Modelfile):**
+5. **Scarica il chat template ufficiale (opzionale ma raccomandato):**
+   ```bash
+   # Scarica chat_template.jinja dal repository HuggingFace
+   curl -o models/llm/chat_template.jinja https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/raw/main/chat_template.jinja
+   ```
+6. **Crea Modelfile (Modelfile):**
    - Crea il Modelfile nella root del progetto (`touch Modelfile`).
-   - Contenuto di Modelfile (Cruciale per Tool Calling ChatML):
+   - Contenuto di Modelfile (Ottimizzato per Tool Calling):
    ```
-   FROM ./models/llm/Qwen3-4B-toolcalling-Q8_0.gguf
+   FROM ./models/llm/Qwen3-4B-Function-Calling-Pro.gguf
+
+   # Stop tokens per ChatML format
    PARAMETER stop "<|im_start|>"
    PARAMETER stop "<|im_end|>"
+
+   # Template ChatML per Qwen3 (compatibile con tool calling)
    TEMPLATE """{{- if .System }}<|im_start|>system
    {{ .System }}<|im_end|>
    {{- end -}}
    {{- if .Prompt }}<|im_start|>user
    {{ .Prompt }}<|im_end|>
    {{- end -}}
-   {{- if .Response }}<|im_start|>assistant
-   {{ .Response }}<|im_end|>
-   {{- end -}}
-   """
+   <|im_start|>assistant
+   {{- if .Response }}{{ .Response }}{{- end -}}"""
+
+   # Parametri ottimizzati per tool calling
    PARAMETER temperature 0.0
    PARAMETER top_p 0.9
+   PARAMETER num_ctx 8192
    ```
-6. **Crea il Modello Locale in Ollama:**
+7. **Crea il Modello Locale in Ollama:**
    ```bash
    ollama create baby-ai-qwen3-tool -f Modelfile
    ```
-7. **Verifica il modello:**
+8. **Verifica il modello:**
    ```bash
    ollama list | grep baby-ai-qwen3-tool
    ```
@@ -308,7 +320,8 @@ Python rewrite di Baby AI con architettura multi-agente. La Fase 1.1 implementa 
 - Python 3.14.0
 - Ollama Server v0.12.11 installato localmente
 - **Modello `baby-ai-qwen3-tool` creato localmente da GGUF**
-  - Scarica da Hugging Face: [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex) | [File GGUF](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/tree/main)
+  - File: `Qwen3-4B-Function-Calling-Pro.gguf` (4.28 GB)
+  - Scarica da Hugging Face: [Pagina modello](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex) | [Download diretto](https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex/blob/main/Qwen3-4B-Function-Calling-Pro.gguf)
 
 ## Setup
 1. **Installa Ollama**
@@ -318,7 +331,8 @@ Python rewrite di Baby AI con architettura multi-agente. La Fase 1.1 implementa 
    ```
 2. **Prepara il Modello**
    ```bash
-   # Scarica il GGUF e crea il Modelfile come descritto nella Fase 0.5
+   # Scarica Qwen3-4B-Function-Calling-Pro.gguf (4.28 GB) da HuggingFace
+   # Crea il Modelfile come descritto nella Fase 0.5
    ollama create baby-ai-qwen3-tool -f Modelfile
    ollama pull nomic-embed-text
    ```
